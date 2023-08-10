@@ -45,7 +45,7 @@ router.post('/getDriver', async(req, res) => {
                     , [NIC]);
                 
                 const totalDemeritPoints = await pool.query(
-                    'SELECT tot_demerit_points FROM general_user WHERE nic = $1'
+                    'SELECT tot_demerit_points FROM users WHERE nic = $1'
                     , [NIC]);
                 
                 const driverDetails = {
