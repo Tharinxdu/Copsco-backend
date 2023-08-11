@@ -40,17 +40,22 @@ router.post('/getDriver', async(req, res) => {
             else
             {
                 let NIC = driver.rows[0].nic;
+                let userID = await pool.query(
+                    'SELECT userid FROM users WHERE nic = $1'
+                    , [NIC]);
+                
+
                 const previousFines = await pool.query(
                     'SELECT * FROM fine INNER JOIN police_divisions ON fine.police_divisionid = police_divisions.division_id WHERE nic = $1'
                     , [NIC]);
                 
                 const totalDemeritPoints = await pool.query(
-                    'SELECT tot_demerit_points FROM users WHERE nic = $1'
-                    , [NIC]);
+                    'SELECT tot_demerit_points FROM license_status WHERE user_id = $1'
+                    , [userID.rows[0].userid]);
 
                 const licenseStatus = await pool.query(
-                    'SELECT license_status FROM users WHERE nic = $1'
-                    , [NIC]);
+                    'SELECT license_status FROM license_status WHERE user_id = $1'
+                    , [userID.rows[0].userid]);
                 
                 const driverDetails = {
                     license_number: driver.rows[0].license_number,
