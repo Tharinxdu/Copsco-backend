@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../database.js'); 
+const db = require('../db.config.js'); 
 const { get } = require('lodash');
+const { v4: uuidv4 } = require('uuid');
 
 const pool = db.pool;
 const rmvPool = db.rmvPool;
@@ -10,7 +11,12 @@ const rmvPool = db.rmvPool;
 router.post('/issueFines', async(req, res) => {
   
     const {
+        date,
+        time,
+        vehicleNumber,
+        vehicleProvince,
         policeDivisionID,
+        description,
         typeOfOffence,
         fineAmount,
         demeritPoints,
@@ -45,16 +51,18 @@ router.post('/issueFines', async(req, res) => {
             }
             else
             {
-                //create the fine record
-                const reference_ID = Math.floor(Math.random() * 1000000) + 1; //random number between 1 and 1000000
+                //generate a uuid for the reference id
+                const reference_ID = uuidv4();
 
                 //set due date two weeks after the current date
-                const date = new Date();
-                date.setDate(date.getDate() + 14);
-                const dueDate = date.toISOString().slice(0,10);
+                const currentDate = new Date();
+                currentDate.setDate(currentDate.getDate() + 14);
+                const dueDate = currentDate.toISOString().slice(0,10);
 
-                const fine = await pool.query("INSERT INTO fine(reference_id, type_of_violation,demerit_points,amount,nic,police_divisionid,due_date) VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING *", 
-                [reference_ID, typeOfOffence, demeritPoints, fineAmount, NIC, policeDivisionID,dueDate]);
+                const fine = await pool.query(
+                    "INSERT INTO fine (reference_id, date, time, vehicle_number, vehicle_province, police_divisionid, type_of_offence, amount, demerit_points, due_date, nic,description) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,$11,$12) RETURNING *",
+                    [reference_ID, date, time, vehicleNumber, vehicleProvince, policeDivisionID, typeOfOffence, fineAmount, demeritPoints, dueDate, NIC,description]
+                );
 
                 if(fine != null)
                 {
