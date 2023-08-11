@@ -39,7 +39,9 @@ router.post('/issueFines', async(req, res) => {
             //return driver details as json
             const driverDetails = driver.rows[0];
             const NIC = driverDetails.nic;
-      
+            const userID = await pool.query(
+                'SELECT userid FROM users WHERE nic = $1'
+                , [NIC]);
 
 
             //check if police division exists
@@ -59,20 +61,37 @@ router.post('/issueFines', async(req, res) => {
                 currentDate.setDate(currentDate.getDate() + 14);
                 const dueDate = currentDate.toISOString().slice(0,10);
 
-                const fine = await pool.query(
-                    "INSERT INTO fine (reference_id, date, time, vehicle_number, vehicle_province, police_divisionid, type_of_offence, amount, demerit_points, due_date, nic,description) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,$11,$12) RETURNING *",
-                    [reference_ID, date, time, vehicleNumber, vehicleProvince, policeDivisionID, typeOfOffence, fineAmount, demeritPoints, dueDate, NIC,description]
-                );
+                // const fine = await pool.query(
+                //     "INSERT INTO fine (reference_id, date, time, vehicle_number, vehicle_province, police_divisionid, type_of_offence, amount, demerit_points, due_date, nic,description) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,$11,$12) RETURNING *",
+                //     [reference_ID, date, time, vehicleNumber, vehicleProvince, policeDivisionID, typeOfOffence, fineAmount, demeritPoints, dueDate, NIC,description]
+                // );
+                const fine = await pool.connect();
 
-                if(fine != null)
+                try
                 {
+                    await fine.query('BEGIN');
+                    const queryText = "INSERT INTO fine (reference_id, date, time, vehicle_number, vehicle_province, police_divisionid, type_of_offence, amount, demerit_points, due_date, nic,description) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,$11,$12) RETURNING *";
+                    const queryValues = [reference_ID, date, time, vehicleNumber, vehicleProvince, policeDivisionID, typeOfOffence, fineAmount, demeritPoints, dueDate, NIC,description];
+                    await fine.query(queryText, queryValues);
+
+                    const queryText2 = "UPDATE license_status SET tot_demerit_points = tot_demerit_points + $1 WHERE user_id = $2";
+                    const queryValues2 = [demeritPoints, userID.rows[0].userid];
+                    await fine.query(queryText2, queryValues2);
+
+                    await fine.query('COMMIT');
                     return res.status(200).json({
                         message: "Fine issued successfully"
                     });
                 }
-                else
+                catch(err)
                 {
+                    await fine.query('ROLLBACK');
+                    console.error(err.message);
                     return res.status(401).json({error: "Error issuing fine, please try again"});
+                }
+                finally
+                {
+                    fine.release();
                 }
             }
         }   
