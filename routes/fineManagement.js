@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../database/database.js'); 
+const db = require('../database.js'); 
 const { get } = require('lodash');
 
 const pool = db.pool;

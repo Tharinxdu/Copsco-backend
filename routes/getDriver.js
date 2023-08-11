@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../database/database.js'); 
+const db = require('../database.js'); 
 const { get } = require('lodash');
 
 const pool = db.pool;
@@ -47,6 +47,10 @@ router.post('/getDriver', async(req, res) => {
                 const totalDemeritPoints = await pool.query(
                     'SELECT tot_demerit_points FROM users WHERE nic = $1'
                     , [NIC]);
+
+                const licenseStatus = await pool.query(
+                    'SELECT license_status FROM users WHERE nic = $1'
+                    , [NIC]);
                 
                 const driverDetails = {
                     license_number: driver.rows[0].license_number,
@@ -60,7 +64,8 @@ router.post('/getDriver', async(req, res) => {
                     restrictions: driver.rows[0].restrictions,
                     vehicle_details: [],
                     previous_fines: [],
-                    total_demerit_points: totalDemeritPoints.rows[0].tot_demerit_points
+                    total_demerit_points: totalDemeritPoints.rows[0].tot_demerit_points,
+                    license_status: licenseStatus.rows[0].license_status
                 };
 
                 driver.rows.forEach(row => {
